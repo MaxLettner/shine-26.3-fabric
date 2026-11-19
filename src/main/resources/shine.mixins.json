@@ -1,0 +1,19 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "com.bloom.mixin.client",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"ChunkSectionsToRenderAccessor",
+		"FluidRendererMixin",
+		"IndigoAltModelBlockRendererMixin",
+		"LevelRendererMixin",
+		"ModelBlockRendererMixin",
+		"SectionCompilerMixin",
+		"accessor.PostChainAccessor",
+		"accessor.PostPassAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
