@@ -7,7 +7,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
 
@@ -24,10 +23,6 @@ public class BloomClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		BloomConfig.load();
-
-		if (FabricLoader.getInstance().isModLoaded("sodium")) {
-			BloomMod.LOGGER.warn("Shine: Sodium compatibility is not ported to 26.3 yet; bloom will have no source geometry while Sodium renders terrain.");
-		}
 
 		// Rendering hooks live in LevelRendererMixin; the post chain runs between opaque and translucent geometry.
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {

@@ -43,6 +43,10 @@ dependencies {
 
 	// Sodium compile stubs for optional compatibility mixins.
 	compileOnly "maven.modrinth:sodium:${project.sodium_version}"
+	// Test with Sodium in the dev client: ./gradlew runClient -PwithSodium
+	if (project.hasProperty("withSodium")) {
+		localRuntime "maven.modrinth:sodium:${project.sodium_version}"
+	}
 }
 
 processResources {

@@ -1,6 +1,7 @@
 package com.bloom.client.render;
 
 import com.bloom.BloomMod;
+import com.bloom.client.compat.sodium.SodiumBloomReplay;
 import com.bloom.mixin.client.ChunkSectionsToRenderAccessor;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
@@ -19,8 +20,10 @@ import com.mojang.renderpearl.api.textures.GpuSampler;
 import com.mojang.renderpearl.api.textures.GpuTextureView;
 import java.util.Optional;
 import java.util.OptionalDouble;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayerGroup;
 import net.minecraft.client.renderer.chunk.ChunkSectionsToRender;
 import net.minecraft.resources.Identifier;
 import org.joml.Vector4f;
@@ -37,6 +40,8 @@ public final class BloomSourceRenderer {
 	private static final Identifier FRAGMENT_SHADER_ID = Identifier.fromNamespaceAndPath(BloomMod.MOD_ID, "core/terrain_bloom_source");
 	private static final float CUTOUT_ALPHA_THRESHOLD = 0.5F;
 	private static final Vector4f CLEAR_COLOR = new Vector4f(0.0F, 0.0F, 0.0F, 0.0F);
+	private static final String SODIUM_CHUNK_SECTION_CLASS = "net.caffeinemc.mods.sodium.client.util.SodiumChunkSection";
+	private static final boolean SODIUM_LOADED = FabricLoader.getInstance().isModLoaded("sodium");
 
 	private static final RenderPipeline SOLID = buildPipeline("solid", RenderPipelines.TERRAIN_SNIPPET, false);
 	private static final RenderPipeline SOLID_MULTIDRAW = buildPipeline("solid_multidraw", RenderPipelines.MULTIDRAW_TERRAIN_SNIPPET, false);
@@ -45,6 +50,7 @@ public final class BloomSourceRenderer {
 
 	private static @Nullable TextureTarget sourceTarget;
 	private static boolean warnedPipelineFailure;
+	private static boolean warnedUnknownTerrainRenderer;
 
 	private BloomSourceRenderer() {
 	}
@@ -55,6 +61,10 @@ public final class BloomSourceRenderer {
 			sourceTarget = null;
 		}
 		warnedPipelineFailure = false;
+		warnedUnknownTerrainRenderer = false;
+		if (SODIUM_LOADED) {
+			SodiumBloomReplay.clearVariants();
+		}
 	}
 
 	/**
@@ -70,7 +80,22 @@ public final class BloomSourceRenderer {
 		GpuTextureView lightmap
 	) {
 		GpuTextureView depthView = mainTarget.getDepthTextureView();
-		if (depthView == null || mainTarget.width <= 0 || mainTarget.height <= 0 || !pipelinesAvailable()) {
+		if (depthView == null || mainTarget.width <= 0 || mainTarget.height <= 0) {
+			return null;
+		}
+
+		if (isSodiumSection(chunkSectionsToRender)) {
+			return renderSodiumSource(chunkSectionsToRender, mainTarget, depthView, atlasSampler, atlas);
+		}
+		if (!(chunkSectionsToRender instanceof ChunkSectionsToRender.DrawSeparate) && !(chunkSectionsToRender instanceof ChunkSectionsToRender.DrawIndirect)) {
+			// Another mod replaced terrain rendering; replaying it would put all of its terrain into the source.
+			if (!warnedUnknownTerrainRenderer) {
+				BloomMod.LOGGER.warn("Shine: unsupported terrain renderer {}; bloom is disabled.", chunkSectionsToRender.getClass().getName());
+				warnedUnknownTerrainRenderer = true;
+			}
+			return null;
+		}
+		if (!pipelinesAvailable()) {
 			return null;
 		}
 
@@ -95,6 +120,39 @@ public final class BloomSourceRenderer {
 		}
 
 		return target;
+	}
+
+	/**
+	 * Sodium draws terrain through its own chunk renderer. Replaying its opaque group into the source pass
+	 * lets Sodium bind its own buffers and uniforms, while {@link SodiumBloomReplay} swaps in the bloom pipeline.
+	 */
+	private static @Nullable RenderTarget renderSodiumSource(
+		ChunkSectionsToRender chunkSectionsToRender,
+		RenderTarget mainTarget,
+		GpuTextureView depthView,
+		GpuSampler atlasSampler,
+		GpuTextureView atlas
+	) {
+		TextureTarget target = ensureTarget(mainTarget.width, mainTarget.height);
+		boolean succeeded;
+		try (
+			RenderPass renderPass = RenderSystem.getDevice()
+				.createCommandEncoder()
+				.createRenderPass(() -> "Shine bloom source (Sodium)", target.getColorTextureView(), Optional.of(CLEAR_COLOR), depthView, OptionalDouble.empty())
+		) {
+			RenderSystem.bindDefaultUniforms(renderPass);
+			SodiumBloomReplay.begin();
+			try {
+				chunkSectionsToRender.renderGroup(ChunkSectionLayerGroup.OPAQUE, renderPass, atlasSampler, atlas, false);
+			} finally {
+				succeeded = SodiumBloomReplay.end();
+			}
+		}
+		return succeeded ? target : null;
+	}
+
+	private static boolean isSodiumSection(ChunkSectionsToRender chunkSectionsToRender) {
+		return SODIUM_LOADED && chunkSectionsToRender.getClass().getName().equals(SODIUM_CHUNK_SECTION_CLASS);
 	}
 
 	private static TextureTarget ensureTarget(int width, int height) {

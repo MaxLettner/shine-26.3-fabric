@@ -6,6 +6,7 @@ package com.bloom.client.selection;
  */
 public final class BloomSelectionState {
 	private static final ThreadLocal<Boolean> COMPILING_SECTION = ThreadLocal.withInitial(() -> false);
+	private static final ThreadLocal<Double> SODIUM_SOURCE_STRENGTH = ThreadLocal.withInitial(() -> 0.0);
 
 	private BloomSelectionState() {
 	}
@@ -20,5 +21,14 @@ public final class BloomSelectionState {
 
 	public static boolean isCompilingSection() {
 		return COMPILING_SECTION.get();
+	}
+
+	/** Sodium meshing: strength of the block or fluid currently being rendered on this thread. */
+	public static void setSodiumSourceStrength(double strength) {
+		SODIUM_SOURCE_STRENGTH.set(strength);
+	}
+
+	public static double getSodiumSourceStrength() {
+		return SODIUM_SOURCE_STRENGTH.get();
 	}
 }

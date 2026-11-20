@@ -1,6 +1,7 @@
 {
 	"required": true,
 	"minVersion": "0.8",
+	"plugin": "com.bloom.mixin.BloomMixinPlugin",
 	"package": "com.bloom.mixin.client",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
@@ -11,7 +12,11 @@
 		"ModelBlockRendererMixin",
 		"SectionCompilerMixin",
 		"accessor.PostChainAccessor",
-		"accessor.PostPassAccessor"
+		"accessor.PostPassAccessor",
+		"sodium.SodiumBlockRendererMixin",
+		"sodium.SodiumChunkMeshBufferBuilderMixin",
+		"sodium.SodiumDefaultFluidRendererMixin",
+		"sodium.SodiumShaderChunkRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
