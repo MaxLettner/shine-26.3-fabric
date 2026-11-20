@@ -11,11 +11,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class SectionCompilerMixin {
 	@Inject(method = "compile", at = @At("HEAD"))
 	private void bloom$beginCompile(CallbackInfoReturnable<SectionCompiler.Results> cir) {
-		BloomSelectionState.beginSectionCompile();
+		BloomSelectionState.get().compilingSection = true;
 	}
 
 	@Inject(method = "compile", at = @At("RETURN"))
 	private void bloom$endCompile(CallbackInfoReturnable<SectionCompiler.Results> cir) {
-		BloomSelectionState.endSectionCompile();
+		BloomSelectionState.get().compilingSection = false;
 	}
 }

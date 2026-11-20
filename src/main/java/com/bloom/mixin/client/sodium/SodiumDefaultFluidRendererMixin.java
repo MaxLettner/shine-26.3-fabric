@@ -14,11 +14,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class SodiumDefaultFluidRendererMixin {
 	@Inject(method = "render", at = @At("HEAD"))
 	private void bloom$setFluidStrength(CallbackInfo ci, @Local(argsOnly = true) FluidState fluidState) {
-		BloomSelectionState.setSodiumSourceStrength(BloomSelection.getFluidSourceStrength(fluidState));
+		BloomSelectionState.get().sodiumEncoding = BloomSelection.getFluidEncoding(fluidState);
 	}
 
 	@Inject(method = "render", at = @At("RETURN"))
 	private void bloom$clearFluidStrength(CallbackInfo ci) {
-		BloomSelectionState.setSodiumSourceStrength(0.0);
+		BloomSelectionState.get().sodiumEncoding = 0;
 	}
 }

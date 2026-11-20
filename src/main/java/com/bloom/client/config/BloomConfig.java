@@ -1,6 +1,7 @@
 package com.bloom.client.config;
 
 import com.bloom.BloomMod;
+import com.bloom.client.selection.BloomSelection;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.IOException;
@@ -30,7 +31,8 @@ public final class BloomConfig {
 	private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("shine.json");
 	private static final Path LEGACY_CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("bloom.json");
 
-	private static Data data = Data.defaults();
+	// Read by chunk meshing threads.
+	private static volatile Data data = Data.defaults();
 
 	private BloomConfig() {
 	}
@@ -49,9 +51,15 @@ public final class BloomConfig {
 
 	public static void set(Data newData) {
 		data = sanitize(newData);
+		BloomSelection.invalidate();
 	}
 
 	public static void load() {
+		loadData();
+		BloomSelection.invalidate();
+	}
+
+	private static void loadData() {
 		Path pathToLoad = Files.exists(CONFIG_PATH) ? CONFIG_PATH : (Files.exists(LEGACY_CONFIG_PATH) ? LEGACY_CONFIG_PATH : null);
 		if (pathToLoad == null) {
 			data = Data.defaults();

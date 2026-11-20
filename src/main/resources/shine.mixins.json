@@ -11,8 +11,6 @@
 		"LevelRendererMixin",
 		"ModelBlockRendererMixin",
 		"SectionCompilerMixin",
-		"accessor.PostChainAccessor",
-		"accessor.PostPassAccessor",
 		"sodium.SodiumBlockRendererMixin",
 		"sodium.SodiumChunkMeshBufferBuilderMixin",
 		"sodium.SodiumDefaultFluidRendererMixin",

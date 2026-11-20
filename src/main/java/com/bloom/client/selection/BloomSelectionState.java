@@ -1,34 +1,21 @@
 package com.bloom.client.selection;
 
 /**
- * Marks the current thread as compiling a chunk section, so light encoding only touches
- * terrain meshes and never block models rendered elsewhere (falling blocks, items, ...).
+ * Per-thread meshing state, held in one mutable object so each lookup is a single ThreadLocal access
+ * without boxing.
  */
 public final class BloomSelectionState {
-	private static final ThreadLocal<Boolean> COMPILING_SECTION = ThreadLocal.withInitial(() -> false);
-	private static final ThreadLocal<Double> SODIUM_SOURCE_STRENGTH = ThreadLocal.withInitial(() -> 0.0);
+	private static final ThreadLocal<BloomSelectionState> CURRENT = ThreadLocal.withInitial(BloomSelectionState::new);
+
+	/** True while this thread runs vanilla's SectionCompiler.compile (vanilla/Indigo meshing). */
+	public boolean compilingSection;
+	/** Encoding of the block or fluid Sodium is currently meshing on this thread. */
+	public int sodiumEncoding;
 
 	private BloomSelectionState() {
 	}
 
-	public static void beginSectionCompile() {
-		COMPILING_SECTION.set(true);
-	}
-
-	public static void endSectionCompile() {
-		COMPILING_SECTION.set(false);
-	}
-
-	public static boolean isCompilingSection() {
-		return COMPILING_SECTION.get();
-	}
-
-	/** Sodium meshing: strength of the block or fluid currently being rendered on this thread. */
-	public static void setSodiumSourceStrength(double strength) {
-		SODIUM_SOURCE_STRENGTH.set(strength);
-	}
-
-	public static double getSodiumSourceStrength() {
-		return SODIUM_SOURCE_STRENGTH.get();
+	public static BloomSelectionState get() {
+		return CURRENT.get();
 	}
 }

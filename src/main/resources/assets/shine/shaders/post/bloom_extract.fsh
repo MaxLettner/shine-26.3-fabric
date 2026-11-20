@@ -6,12 +6,6 @@
 uniform sampler2D DepthSampler;
 uniform sampler2D SourceSampler;
 
-layout(std140) uniform SamplerInfo {
-    vec2 OutSize;
-    vec2 DepthSize;
-    vec2 SourceSize;
-};
-
 layout(std140) uniform BloomExtractConfig {
     float Threshold;
     float HighlightClamp;

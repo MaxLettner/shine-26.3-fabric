@@ -49,7 +49,7 @@ public final class BloomSourceRenderer {
 	private static final RenderPipeline CUTOUT_MULTIDRAW = buildPipeline("cutout_multidraw", RenderPipelines.MULTIDRAW_TERRAIN_SNIPPET, true);
 
 	private static @Nullable TextureTarget sourceTarget;
-	private static boolean warnedPipelineFailure;
+	private static boolean pipelinesFailed;
 	private static boolean warnedUnknownTerrainRenderer;
 
 	private BloomSourceRenderer() {
@@ -60,7 +60,7 @@ public final class BloomSourceRenderer {
 			sourceTarget.destroyBuffers();
 			sourceTarget = null;
 		}
-		warnedPipelineFailure = false;
+		pipelinesFailed = false;
 		warnedUnknownTerrainRenderer = false;
 		if (SODIUM_LOADED) {
 			SodiumBloomReplay.clearVariants();
@@ -133,6 +133,10 @@ public final class BloomSourceRenderer {
 		GpuSampler atlasSampler,
 		GpuTextureView atlas
 	) {
+		if (SodiumBloomReplay.hasFailed()) {
+			return null;
+		}
+
 		TextureTarget target = ensureTarget(mainTarget.width, mainTarget.height);
 		boolean succeeded;
 		try (
@@ -165,13 +169,17 @@ public final class BloomSourceRenderer {
 	}
 
 	private static boolean pipelinesAvailable() {
+		if (pipelinesFailed) {
+			return false;
+		}
 		boolean available = RenderSystem.getCompiledPipelineNullable(SOLID) != null
 			&& RenderSystem.getCompiledPipelineNullable(SOLID_MULTIDRAW) != null
 			&& RenderSystem.getCompiledPipelineNullable(CUTOUT) != null
 			&& RenderSystem.getCompiledPipelineNullable(CUTOUT_MULTIDRAW) != null;
-		if (!available && !warnedPipelineFailure) {
-			BloomMod.LOGGER.warn("Shine bloom source pipelines failed to compile; bloom is unavailable.");
-			warnedPipelineFailure = true;
+		if (!available) {
+			// The pipeline cache does not remember failures; don't recompile every frame.
+			pipelinesFailed = true;
+			BloomMod.LOGGER.warn("Shine bloom source pipelines failed to compile; bloom is disabled until the config is saved again.");
 		}
 		return available;
 	}

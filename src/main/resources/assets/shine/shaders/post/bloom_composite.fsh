@@ -1,45 +1,35 @@
 #version 330
 #extension GL_ARB_separate_shader_objects : require
 
+// Adds the weighted bloom pyramid onto the main target (additive blend, color channels only).
+// BLOOM_LEVELS (1-6) is a pipeline define so inactive levels are neither bound nor sampled.
+
 #include <shine:bloom_depth.glsl>
 
-uniform sampler2D MainSampler;
-uniform sampler2D HalfSampler;
-uniform sampler2D QuarterSampler;
-uniform sampler2D EighthSampler;
-uniform sampler2D SixteenthSampler;
-uniform sampler2D ThirtysecondSampler;
-uniform sampler2D SixtyfourthSampler;
 uniform sampler2D DepthSampler;
-
-layout(std140) uniform SamplerInfo {
-    vec2 OutSize;
-    vec2 MainSize;
-    vec2 HalfSize;
-    vec2 QuarterSize;
-    vec2 EighthSize;
-    vec2 SixteenthSize;
-    vec2 ThirtysecondSize;
-    vec2 SixtyfourthSize;
-    vec2 DepthSize;
-};
+uniform sampler2D Level0Sampler;
+#if BLOOM_LEVELS > 1
+uniform sampler2D Level1Sampler;
+#endif
+#if BLOOM_LEVELS > 2
+uniform sampler2D Level2Sampler;
+#endif
+#if BLOOM_LEVELS > 3
+uniform sampler2D Level3Sampler;
+#endif
+#if BLOOM_LEVELS > 4
+uniform sampler2D Level4Sampler;
+#endif
+#if BLOOM_LEVELS > 5
+uniform sampler2D Level5Sampler;
+#endif
 
 layout(std140) uniform BloomCompositeConfig {
+    vec4 Weights0;      // levels 0-3
+    vec4 Weights1;      // levels 4-5
+    vec4 HalfTexelX0;   // 0.5 / level width, levels 0-3
+    vec4 HalfTexelX1;   // levels 4-5
     float Strength;
-};
-
-layout(std140) uniform BloomCompositeWeights {
-    float Weight0;
-    float Weight1;
-    float Weight2;
-    float Weight3;
-    float Weight4;
-    float Weight5;
-    float WeightPad0;
-    float WeightPad1;
-};
-
-layout(std140) uniform BloomCompositeDistanceConfig {
     float MaxDistance;
     float NearPlane;
     float FarPlane;
@@ -50,28 +40,41 @@ layout(location = 0) in vec2 texCoord;
 
 layout(location = 0) out vec4 fragColor;
 
-vec3 centered_sample(sampler2D levelSampler, vec2 uv, vec2 levelSize) {
-    vec2 halfTexelX = vec2(0.5 / max(levelSize.x, 1.0), 0.0);
-    return (texture(levelSampler, uv - halfTexelX).rgb + texture(levelSampler, uv + halfTexelX).rgb) * 0.5;
+vec3 centered_sample(sampler2D levelSampler, vec2 uv, float halfTexelX) {
+    vec2 offset = vec2(halfTexelX, 0.0);
+    return (texture(levelSampler, uv - offset).rgb + texture(levelSampler, uv + offset).rgb) * 0.5;
 }
 
 void main() {
     vec2 uv = texCoord;
-    vec4 sceneColor = texture(MainSampler, uv);
     float depth = texture(DepthSampler, uv).r;
     if (shine_is_sky(depth)) {
-        fragColor = sceneColor;
+        fragColor = vec4(0.0);
         return;
     }
 
     float sceneDistance = shine_linearize_depth(depth, NearPlane, FarPlane);
     float distanceMask = 1.0 - smoothstep(MaxDistance, MaxDistance + DistanceFadeRange, sceneDistance);
-    vec3 bloomColor = centered_sample(HalfSampler, uv, HalfSize) * Weight0;
-    bloomColor += centered_sample(QuarterSampler, uv, QuarterSize) * Weight1;
-    bloomColor += centered_sample(EighthSampler, uv, EighthSize) * Weight2;
-    bloomColor += centered_sample(SixteenthSampler, uv, SixteenthSize) * Weight3;
-    bloomColor += centered_sample(ThirtysecondSampler, uv, ThirtysecondSize) * Weight4;
-    bloomColor += centered_sample(SixtyfourthSampler, uv, SixtyfourthSize) * Weight5;
-    bloomColor *= Strength * distanceMask;
-    fragColor = vec4(sceneColor.rgb + bloomColor, sceneColor.a);
+    if (distanceMask <= 0.0) {
+        fragColor = vec4(0.0);
+        return;
+    }
+
+    vec3 bloom = centered_sample(Level0Sampler, uv, HalfTexelX0.x) * Weights0.x;
+#if BLOOM_LEVELS > 1
+    bloom += centered_sample(Level1Sampler, uv, HalfTexelX0.y) * Weights0.y;
+#endif
+#if BLOOM_LEVELS > 2
+    bloom += centered_sample(Level2Sampler, uv, HalfTexelX0.z) * Weights0.z;
+#endif
+#if BLOOM_LEVELS > 3
+    bloom += centered_sample(Level3Sampler, uv, HalfTexelX0.w) * Weights0.w;
+#endif
+#if BLOOM_LEVELS > 4
+    bloom += centered_sample(Level4Sampler, uv, HalfTexelX1.x) * Weights1.x;
+#endif
+#if BLOOM_LEVELS > 5
+    bloom += centered_sample(Level5Sampler, uv, HalfTexelX1.y) * Weights1.y;
+#endif
+    fragColor = vec4(bloom * (Strength * distanceMask), 0.0);
 }

@@ -28,14 +28,12 @@ public final class SodiumBloomReplay {
 
 	private static boolean active;
 	private static boolean failed;
-	private static boolean warnedFailure;
 
 	private SodiumBloomReplay() {
 	}
 
 	public static void begin() {
 		active = true;
-		failed = false;
 	}
 
 	/**
@@ -50,19 +48,24 @@ public final class SodiumBloomReplay {
 		return active;
 	}
 
+	/** Once a variant fails to compile, the replay is skipped until {@link #clearVariants()} (config save). */
+	public static boolean hasFailed() {
+		return failed;
+	}
+
 	/**
 	 * Returns the bloom variant of an opaque Sodium pipeline. If it cannot be compiled the original is
 	 * returned (Sodium would throw on a missing pipeline) and the replay is marked as failed so its
-	 * output is discarded.
+	 * output is discarded and later replays are skipped.
 	 */
 	public static RenderPipeline variantOf(RenderPipeline sodiumPipeline) {
+		if (failed) {
+			return sodiumPipeline;
+		}
 		RenderPipeline variant = VARIANTS.computeIfAbsent(sodiumPipeline, SodiumBloomReplay::buildVariant);
 		if (RenderSystem.getCompiledPipelineNullable(variant) == null) {
 			failed = true;
-			if (!warnedFailure) {
-				BloomMod.LOGGER.warn("Shine: Sodium bloom pipeline {} failed to compile; bloom is unavailable with Sodium.", variant.getLocation());
-				warnedFailure = true;
-			}
+			BloomMod.LOGGER.warn("Shine: Sodium bloom pipeline {} failed to compile; bloom is disabled with Sodium until the config is saved again.", variant.getLocation());
 			return sodiumPipeline;
 		}
 		return variant;
@@ -95,6 +98,6 @@ public final class SodiumBloomReplay {
 
 	public static void clearVariants() {
 		VARIANTS.clear();
-		warnedFailure = false;
+		failed = false;
 	}
 }

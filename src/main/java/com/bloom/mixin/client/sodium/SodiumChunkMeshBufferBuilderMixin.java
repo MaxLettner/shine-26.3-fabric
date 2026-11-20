@@ -16,6 +16,6 @@ public abstract class SodiumChunkMeshBufferBuilderMixin {
 		argsOnly = true
 	)
 	private int bloom$encodeSourceStrength(int materialBits) {
-		return BloomSourceEncoding.encodeMaterialBits(materialBits, BloomSelectionState.getSodiumSourceStrength());
+		return BloomSourceEncoding.applyToMaterial(materialBits, BloomSelectionState.get().sodiumEncoding);
 	}
 }
