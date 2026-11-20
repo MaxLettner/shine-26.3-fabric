@@ -55,6 +55,13 @@ public final class BloomSourceRenderer {
 	private BloomSourceRenderer() {
 	}
 
+	public static void clearPipelineFailures() {
+		pipelinesFailed = false;
+		if (SODIUM_LOADED) {
+			SodiumBloomReplay.clearFailure();
+		}
+	}
+
 	public static void reset() {
 		if (sourceTarget != null) {
 			sourceTarget.destroyBuffers();

@@ -10,6 +10,7 @@
 		"IndigoAltModelBlockRendererMixin",
 		"LevelRendererMixin",
 		"ModelBlockRendererMixin",
+		"RenderSystemMixin",
 		"SectionCompilerMixin",
 		"sodium.SodiumBlockRendererMixin",
 		"sodium.SodiumChunkMeshBufferBuilderMixin",

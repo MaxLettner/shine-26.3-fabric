@@ -96,6 +96,10 @@ public final class SodiumBloomReplay {
 			.build();
 	}
 
+	public static void clearFailure() {
+		failed = false;
+	}
+
 	public static void clearVariants() {
 		VARIANTS.clear();
 		failed = false;

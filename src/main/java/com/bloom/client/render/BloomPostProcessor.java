@@ -109,6 +109,12 @@ public final class BloomPostProcessor {
 		return config.enabled;
 	}
 
+	/** Called when shaders are reloaded: compile failures may be fixed now, so try again. */
+	public static void onPipelinesReloaded() {
+		pipelinesFailed = false;
+		BloomSourceRenderer.clearPipelineFailures();
+	}
+
 	public static void onConfigSaved() {
 		uniformsDirty = true;
 		pipelinesFailed = false;
